@@ -1,5 +1,3 @@
----
-
 # Weather API
 
 This repository hosts a Weather API project that allows users to get current weather information for any city around the world. The API is designed to provide real-time data such as temperature, humidity, wind speed, and weather conditions using a simple and intuitive interface.
