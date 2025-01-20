@@ -6,7 +6,7 @@ This repository hosts a Weather API project that allows users to get current wea
 
 ## Live Demo
 
-You can try the live demo of the Weather API here:(https://13sudhanshu.github.io/Weather-Api/)
+You can try the live demo of the Weather API here:(https://sudhanshugxyz.github.io/Weather-Api/))
 
 ## Features
 
