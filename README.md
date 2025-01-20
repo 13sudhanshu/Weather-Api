@@ -64,10 +64,6 @@ const apiKey = "YOUR_API_KEY";
 5. Push to the branch (`git push origin feature-branch`).
 6. Create a new Pull Request.
 
-## License
-
-This project is open-source and available under the [MIT License](LICENSE).
-
 ## Acknowledgments
 
 - [OpenWeather](https://openweathermap.org/) for providing the weather data API.
