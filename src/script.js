@@ -14,7 +14,7 @@ function showError(message) {
     weatherInfo.classList.add('hidden');
 }
 
-const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
+const API_KEY = '88be454612d9a71eea129bf24ef1efe2';
 
 if (!API_KEY) {
     showError('Weather API key is missing. Please add your API key to the .env file.');
