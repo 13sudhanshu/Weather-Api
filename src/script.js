@@ -1,14 +1,27 @@
-const API_KEY = '88be454612d9a71eea129bf24ef1efe2';
-const BASE_URL = 'https://api.openweathermap.org/data/2.5';
-
 // DOM Elements
+const errorMessage = document.getElementById('error-message');
+const weatherInfo = document.getElementById('weather-info');
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-input');
 const locationButton = document.getElementById('location-button');
-const errorMessage = document.getElementById('error-message');
-const weatherInfo = document.getElementById('weather-info');
 const showMoreBtn = document.getElementById('show-more');
 const forecastGrid = document.getElementById('forecast-grid');
+
+// Show error message function
+function showError(message) {
+    errorMessage.textContent = message;
+    errorMessage.classList.remove('hidden');
+    weatherInfo.classList.add('hidden');
+}
+
+const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
+
+if (!API_KEY) {
+    showError('Weather API key is missing. Please add your API key to the .env file.');
+    throw new Error('Weather API key is missing');
+}
+
+const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 // Weather background mapping
 const weatherBackgrounds = {
@@ -78,6 +91,9 @@ function setWeatherBackground(weatherMain) {
 async function getCountryInfo(countryCode) {
     try {
         const response = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
+        if (!response.ok) {
+            throw new Error(`Country info request failed: ${response.statusText}`);
+        }
         const [data] = await response.json();
         return {
             name: data.name.common,
@@ -91,33 +107,38 @@ async function getCountryInfo(countryCode) {
 
 // Update weather UI
 async function updateWeatherUI(weatherData) {
-    const locationTime = getLocationDateTime(Date.now(), weatherData.timezone);
-    
-    document.getElementById('location').textContent = weatherData.name;
-    
-    // Get and display country info
-    const countryInfo = await getCountryInfo(weatherData.sys.country);
-    if (countryInfo) {
-        document.getElementById('location-info').textContent = 
-            `${countryInfo.name}, ${countryInfo.continent}`;
+    try {
+        const locationTime = getLocationDateTime(Date.now(), weatherData.timezone);
+        
+        document.getElementById('location').textContent = weatherData.name;
+        
+        // Get and display country info
+        const countryInfo = await getCountryInfo(weatherData.sys.country);
+        if (countryInfo) {
+            document.getElementById('location-info').textContent = 
+                `${countryInfo.name}, ${countryInfo.continent}`;
+        }
+        
+        document.getElementById('date').textContent = formatDate(locationTime, weatherData.timezone);
+        document.getElementById('temperature').textContent = `${Math.round(weatherData.main.temp)}°C`;
+        document.getElementById('description').textContent = weatherData.weather[0].description;
+        document.getElementById('humidity').textContent = `${weatherData.main.humidity}%`;
+        document.getElementById('wind-speed').textContent = `${weatherData.wind.speed} m/s`;
+        document.getElementById('sunrise').textContent = formatTime(weatherData.sys.sunrise, weatherData.timezone);
+        document.getElementById('sunset').textContent = formatTime(weatherData.sys.sunset, weatherData.timezone);
+
+        // Set weather background
+        setWeatherBackground(weatherData.weather[0].main);
+
+        // Start updating time continuously
+        updateCurrentTime(weatherData.timezone);
+        // Update time every second
+        if (window.timeInterval) clearInterval(window.timeInterval);
+        window.timeInterval = setInterval(() => updateCurrentTime(weatherData.timezone), 1000);
+    } catch (error) {
+        console.error('Error updating weather UI:', error);
+        showError('Error updating weather information');
     }
-    
-    document.getElementById('date').textContent = formatDate(locationTime, weatherData.timezone);
-    document.getElementById('temperature').textContent = `${Math.round(weatherData.main.temp)}°C`;
-    document.getElementById('description').textContent = weatherData.weather[0].description;
-    document.getElementById('humidity').textContent = `${weatherData.main.humidity}%`;
-    document.getElementById('wind-speed').textContent = `${weatherData.wind.speed} m/s`;
-    document.getElementById('sunrise').textContent = formatTime(weatherData.sys.sunrise, weatherData.timezone);
-    document.getElementById('sunset').textContent = formatTime(weatherData.sys.sunset, weatherData.timezone);
-
-    // Set weather background
-    setWeatherBackground(weatherData.weather[0].main);
-
-    // Start updating time continuously
-    updateCurrentTime(weatherData.timezone);
-    // Update time every second
-    if (window.timeInterval) clearInterval(window.timeInterval);
-    window.timeInterval = setInterval(() => updateCurrentTime(weatherData.timezone), 1000);
 }
 
 // Process forecast data to get daily forecasts
@@ -143,28 +164,33 @@ function processForecastData(forecastData) {
         }
     });
 
-    return Object.values(dailyForecasts).slice(0, 7);
+    return Object.values(dailyForecasts).slice(0, 8);
 }
 
 // Update forecast UI
 function updateForecastUI(forecastData) {
-    forecastGrid.innerHTML = '';
-    const dailyForecasts = processForecastData(forecastData);
+    try {
+        forecastGrid.innerHTML = '';
+        const dailyForecasts = processForecastData(forecastData);
 
-    dailyForecasts.forEach(day => {
-        const forecastCard = document.createElement('div');
-        forecastCard.className = 'forecast-card';
-        forecastCard.innerHTML = `
-            <p>${new Date(day.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' })}</p>
-            <img src="https://openweathermap.org/img/wn/${day.weather.icon}@2x.png" 
-                 alt="${day.weather.description}">
-            <div class="temp-range">
-                <span class="max">${Math.round(day.temp.max)}°</span>
-                <span class="min">${Math.round(day.temp.min)}°</span>
-            </div>
-        `;
-        forecastGrid.appendChild(forecastCard);
-    });
+        dailyForecasts.forEach(day => {
+            const forecastCard = document.createElement('div');
+            forecastCard.className = 'forecast-card';
+            forecastCard.innerHTML = `
+                <p>${new Date(day.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                <img src="https://openweathermap.org/img/wn/${day.weather.icon}@2x.png" 
+                     alt="${day.weather.description}">
+                <div class="temp-range">
+                    <span class="max">${Math.round(day.temp.max)}°</span>
+                    <span class="min">${Math.round(day.temp.min)}°</span>
+                </div>
+            `;
+            forecastGrid.appendChild(forecastCard);
+        });
+    } catch (error) {
+        console.error('Error updating forecast UI:', error);
+        showError('Error updating forecast information');
+    }
 }
 
 // Fetch weather data
@@ -200,13 +226,6 @@ async function fetchWeatherData(lat, lon) {
         showError(`Unable to get weather data: ${error.message}`);
         console.error('Error:', error);
     }
-}
-
-// Show error message
-function showError(message) {
-    errorMessage.textContent = message;
-    errorMessage.classList.remove('hidden');
-    weatherInfo.classList.add('hidden');
 }
 
 // Handle search
@@ -261,7 +280,7 @@ function getCurrentLocation() {
 // Toggle forecast visibility
 function toggleForecast() {
     forecastGrid.classList.toggle('expanded');
-    showMoreBtn.textContent = forecastGrid.classList.contains('expanded') ? 'Hide' : 'Show ';
+    showMoreBtn.textContent = forecastGrid.classList.contains('expanded') ? 'Hide' : 'Show';
 }
 
 // Event listeners
@@ -269,5 +288,7 @@ searchForm.addEventListener('submit', handleSearch);
 locationButton.addEventListener('click', getCurrentLocation);
 showMoreBtn.addEventListener('click', toggleForecast);
 
-// Get current location on load
-getCurrentLocation();
+// Initial check for API key before getting current location
+if (API_KEY) {
+    getCurrentLocation();
+}
